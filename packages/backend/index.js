@@ -4,6 +4,8 @@ import { connect } from "mongoose";
 import { Server } from "socket.io";
 import cors from "cors";
 import articleRoutes from "./routes/article.js";
+import dotenv from "dotenv";
+dotenv.config();
 const app = express();
 const server = createServer(app);
 export const io = new Server(server, {
@@ -24,18 +26,23 @@ app.use(cors());
 app.use(json());
 app.use("/api", articleRoutes);
 
-// Connect to MongoDB
-connect("mongodb://localhost:27017/newsapp")
-	.then(() => console.log("MongoDB connected"))
-	.catch((err) => console.log(err));
-
+const connectDB = async () => {
+	try {
+		const conn = await connect(process.env.mongodb_url);
+		console.log(`MongoDB Connected: ${conn.connection.host}`);
+	} catch (error) {
+		console.error(`Error: ${error.message}`);
+		process.exit(1);
+	}
+};
+connectDB();
 // Socket.IO Connection
 io.on("connection", (socket) => {
 	console.log("New client connected");
 
 	// Debug event to test connection
 	socket.emit("test", { message: "Connected successfully" });
-	
+
 	socket.on("disconnect", () => {
 		console.log("Client disconnected");
 	});
