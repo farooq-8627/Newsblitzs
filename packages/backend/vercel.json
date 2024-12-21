@@ -12,6 +12,7 @@
       "dest": "index.js"
     }
   ],
-  "outputDirectory": ".",
-  "public": false
+  "env": {
+    "MONGODB_URL": "@mongodb_url"
+  }
 } 

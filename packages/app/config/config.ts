@@ -4,4 +4,4 @@ export const BACKEND_URL = __DEV__
   ? Platform.OS === 'android'
     ? 'http://192.168.94.8:3000' // Local development URL for Android
     : 'http://localhost:3000' // Local development URL for iOS
-  : 'https://newsblitzs.onrender.com'; // Production URL on Render
+  : 'https://newsblitzs-backend.vercel.app'; // Production URL on Render
