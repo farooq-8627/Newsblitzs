@@ -1,6 +1,6 @@
 import express from "express";
 import { createServer } from "http";
-import { connect } from "mongoose";
+import mongoose from "mongoose";
 import { Server } from "socket.io";
 import cors from "cors";
 import articleRoutes from "./routes/article.js";
@@ -28,7 +28,6 @@ export const io = new Server(server, {
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use("/api", articleRoutes);
 
 // MongoDB connection
 const connectDB = async () => {
@@ -36,23 +35,39 @@ const connectDB = async () => {
 		if (!process.env.MONGODB_URL) {
 			throw new Error('MONGODB_URL is not defined');
 		}
-		const conn = await connect(process.env.MONGODB_URL);
-		console.log(`MongoDB Connected: ${conn.connection.host}`);
+		
+		await mongoose.connect(process.env.MONGODB_URL, {
+			useNewUrlParser: true,
+			useUnifiedTopology: true,
+			bufferCommands: false, // Disable mongoose buffering
+			serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+		});
+		
+		console.log('MongoDB Connected');
+		return mongoose.connection;
 	} catch (error) {
-		console.error(`Error: ${error.message}`);
+		console.error('MongoDB connection error:', error);
 		throw error;
 	}
 };
 
-// Connect to MongoDB for each request
+// Connect to MongoDB at startup
+let cachedConnection = null;
+
 app.use(async (req, res, next) => {
 	try {
-		await connectDB();
+		if (!cachedConnection) {
+			cachedConnection = await connectDB();
+		}
 		next();
 	} catch (error) {
-		res.status(500).json({ error: 'Database connection failed' });
+		console.error('Connection error:', error);
+		res.status(500).json({ error: 'Database connection failed', details: error.message });
 	}
 });
+
+// Routes
+app.use("/api", articleRoutes);
 
 // Socket.IO connection handling
 io.on("connection", (socket) => {
@@ -71,8 +86,8 @@ app.get("/", (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-	console.error(err);
-	res.status(500).json({ error: 'Internal server error' });
+	console.error('Error:', err);
+	res.status(500).json({ error: 'Internal server error', details: err.message });
 });
 
 // For local development
@@ -86,7 +101,6 @@ if (process.env.NODE_ENV !== 'production') {
 // Export for serverless
 export default async (req, res) => {
 	if (req.method === 'GET' && req.url === '/socket.io/') {
-		// Handle Socket.IO upgrade
 		await new Promise((resolve) => {
 			server.listen(0, () => {
 				server.on('upgrade', (request, socket, head) => {
