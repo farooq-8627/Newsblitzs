@@ -33,39 +33,24 @@ app.use(express.json());
 const connectDB = async () => {
 	try {
 		if (!process.env.MONGODB_URL) {
-			throw new Error('MONGODB_URL is not defined');
+			throw new Error("MONGODB_URL is not defined");
 		}
-		
+
 		await mongoose.connect(process.env.MONGODB_URL, {
 			useNewUrlParser: true,
 			useUnifiedTopology: true,
 			bufferCommands: false, // Disable mongoose buffering
 			serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
 		});
-		
-		console.log('MongoDB Connected');
+
+		console.log("MongoDB Connected");
 		return mongoose.connection;
 	} catch (error) {
-		console.error('MongoDB connection error:', error);
+		console.error("MongoDB connection error:", error);
 		throw error;
 	}
 };
-
-// Connect to MongoDB at startup
-let cachedConnection = null;
-
-app.use(async (req, res, next) => {
-	try {
-		if (!cachedConnection) {
-			cachedConnection = await connectDB();
-		}
-		next();
-	} catch (error) {
-		console.error('Connection error:', error);
-		res.status(500).json({ error: 'Database connection failed', details: error.message });
-	}
-});
-
+connectDB();
 // Routes
 app.use("/api", articleRoutes);
 
@@ -73,7 +58,7 @@ app.use("/api", articleRoutes);
 io.on("connection", (socket) => {
 	console.log("New client connected");
 	socket.emit("test", { message: "Connected successfully" });
-	
+
 	socket.on("disconnect", () => {
 		console.log("Client disconnected");
 	});
@@ -86,12 +71,14 @@ app.get("/", (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-	console.error('Error:', err);
-	res.status(500).json({ error: 'Internal server error', details: err.message });
+	console.error("Error:", err);
+	res
+		.status(500)
+		.json({ error: "Internal server error", details: err.message });
 });
 
 // For local development
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== "production") {
 	const PORT = process.env.PORT || 3000;
 	server.listen(PORT, "0.0.0.0", () =>
 		console.log(`Server running on port ${PORT}`)
@@ -100,16 +87,16 @@ if (process.env.NODE_ENV !== 'production') {
 
 // Export for serverless
 export default async (req, res) => {
-	if (req.method === 'GET' && req.url === '/socket.io/') {
+	if (req.method === "GET" && req.url === "/socket.io/") {
 		await new Promise((resolve) => {
 			server.listen(0, () => {
-				server.on('upgrade', (request, socket, head) => {
+				server.on("upgrade", (request, socket, head) => {
 					io.engine.handleUpgrade(request, socket, head);
 				});
 				resolve();
 			});
 		});
 	}
-	
+
 	return app(req, res);
 };
