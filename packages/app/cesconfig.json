@@ -28,7 +28,7 @@
   },
   "packageManager": {
     "type": "npm",
-    "version": "10.9.0"
+    "version": "22.9.0"
   },
   "os": {
     "type": "Darwin",

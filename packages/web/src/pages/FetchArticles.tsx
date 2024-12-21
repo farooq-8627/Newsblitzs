@@ -137,7 +137,7 @@ const FetchArticles = () => {
 
 	if (loading) {
 		return (
-			<div className="flex items-center justify-center min-h-screen bg-gray-100">
+			<div className="flex items-center justify-center min-h-screen w-screen bg-gray-100">
 				<div className="text-xl text-gray-600">Loading articles...</div>
 			</div>
 		);
@@ -145,7 +145,7 @@ const FetchArticles = () => {
 
 	if (error) {
 		return (
-			<div className="flex items-center justify-center min-h-screen bg-gray-100">
+			<div className="flex items-center justify-center min-h-screen w-screen bg-gray-100">
 				<div className="text-xl text-red-600">{error}</div>
 			</div>
 		);
@@ -165,7 +165,7 @@ const FetchArticles = () => {
 				</div>
 
 				{articles.length === 0 ? (
-					<div className="text-xl text-gray-600 text-center">
+					<div className="text-xl text-gray-600 text-center w-screen">
 						No articles found.
 					</div>
 				) : (

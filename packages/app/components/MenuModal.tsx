@@ -67,16 +67,7 @@ export default function MenuModal({
         router.push('/search');
       },
       show: true,
-    },
-    {
-      icon: 'color-palette',
-      title: 'Theme Settings',
-      onPress: () => {
-        onClose();
-        router.push('/theme');
-      },
-      show: true,
-    },
+    }
   ].filter((item) => item.show);
 
   return (

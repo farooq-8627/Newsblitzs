@@ -8,6 +8,7 @@
 		"app": "cd packages/app && npm start",
 		"api": "cd packages/backend && npm start",
 		"build:api": "cd packages/backend && npm run build",
-		"deploy:api": "cd packages/backend && npm run deploy"
+		"deploy:api": "cd packages/backend && npm run deploy",
+		"install:app": "cd packages/app && npm install --legacy-peer-deps"
 	}
 }
