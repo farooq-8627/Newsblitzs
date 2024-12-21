@@ -42,7 +42,7 @@ const EditForm = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="flex items-center justify-center min-h-screen w-screen bg-gray-100">
         <div className="text-xl text-gray-600">Loading article...</div>
       </div>
     );
@@ -50,7 +50,7 @@ const EditForm = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="flex items-center justify-center min-h-screen w-screen bg-gray-100">
         <div className="text-xl text-red-600">{error}</div>
       </div>
     );
@@ -58,7 +58,7 @@ const EditForm = () => {
 
   if (!article) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <div className="flex items-center justify-center min-h-screen w-screen bg-gray-100">
         <div className="text-xl text-red-600">Article not found</div>
       </div>
     );
