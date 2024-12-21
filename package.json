@@ -1,5 +1,13 @@
 {
-  "devDependencies": {
-    "babel-plugin-module-resolver": "^5.0.2"
-  }
+	"name": "newsblitz",
+	"private": true,
+	"workspaces": [
+		"packages/*"
+	],
+	"scripts": {
+		"app": "cd packages/app && npm start",
+		"api": "cd packages/backend && npm start",
+		"build:api": "cd packages/backend && npm run build",
+		"deploy:api": "cd packages/backend && npm run deploy"
+	}
 }
