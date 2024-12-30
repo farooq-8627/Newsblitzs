@@ -1,0 +1,8 @@
+{
+  "android": {
+    "package": "com.reelary.newsblitz"
+  },
+  "ios": {
+    "bundleIdentifier": "com.reelary.newsblitz"
+  }
+}
