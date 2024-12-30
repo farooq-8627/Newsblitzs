@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import React from 'react';
 import { View, Text, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import FeedItems, { FeedItemsHandle } from './FeedItems';
 import { BACKEND_URL } from '../config/config';
-import { io, Socket } from 'socket.io-client';
 import Toast from 'react-native-toast-message';
 import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync, sendLocalNotification } from '@/utils/notifications';

@@ -10,5 +10,8 @@
 		"build:api": "cd packages/backend && npm run build",
 		"deploy:api": "cd packages/backend && npm run deploy",
 		"install:app": "cd packages/app && npm install --legacy-peer-deps"
+	},
+	"devDependencies": {
+		"concurrently": "^8.2.2"
 	}
 }
