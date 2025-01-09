@@ -114,6 +114,33 @@ const FetchArticles = () => {
 		);
 	};
 
+	const deleteImageFromCloudinary = async (imageUrl: string) => {
+		try {
+			const urlParts = imageUrl.split("/");
+			const publicIdWithExtension = urlParts[urlParts.length - 1];
+			const publicId = publicIdWithExtension.split(".")[0];
+
+			const data = new FormData();
+			data.append("public_id", publicId);
+			data.append(
+				"upload_preset",
+				import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+			);
+			data.append("cloud_name", import.meta.env.VITE_CLOUDINARY_CLOUD_NAME);
+
+			await axios.post(
+				`https://api.cloudinary.com/v1_1/${
+					import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+				}/image/destroy`,
+				data
+			);
+
+			console.log("Image deleted successfully from Cloudinary");
+		} catch (error) {
+			console.error("Error deleting image from Cloudinary:", error);
+		}
+	};
+
 	// Delete article
 	const handleDelete = async (articleId: string) => {
 		if (!window.confirm("Are you sure you want to delete this article?")) {
@@ -121,13 +148,23 @@ const FetchArticles = () => {
 		}
 
 		try {
+			// Find the article to get its image URL
+			const articleToDelete = articles.find(
+				(article) => article._id === articleId
+			);
+			if (articleToDelete?.imageLink) {
+				await deleteImageFromCloudinary(articleToDelete.imageLink);
+			}
+
+			// Delete the article from backend
 			await axios.delete(
 				`${import.meta.env.VITE_BACKEND_URL}/api/articles/${articleId}`
 			);
+
 			// Remove the deleted article from state
 			setArticles(articles.filter((article) => article._id !== articleId));
 
-			// Show success message (optional)
+			// Show success message
 			alert("Article deleted successfully!");
 		} catch (err) {
 			console.error("Error deleting article:", err);

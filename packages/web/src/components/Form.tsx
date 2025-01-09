@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import axios from "axios";
 
@@ -32,6 +32,7 @@ const ArticleForm: React.FC<ArticleFormProps> = ({
 		watch,
 		formState: { errors, isSubmitting },
 		reset,
+		setValue,
 	} = useForm<FormInputs>({
 		mode: "onTouched",
 		defaultValues: initialValues || {
@@ -42,12 +43,57 @@ const ArticleForm: React.FC<ArticleFormProps> = ({
 	});
 
 	const [result, setResult] = React.useState<Result | null>(null);
+	const [uploadStatus, setUploadStatus] = useState<string>("");
+	const [isUploading, setIsUploading] = useState(false);
+
+	const deleteImageFromCloudinary = async (imageUrl: string) => {
+		try {
+			// Extract the folder path and public ID from the URL
+			// Example URL: https://res.cloudinary.com/cloud_name/image/upload/v1234567890/folder/image.jpg
+			const matches = imageUrl.match(/\/v\d+\/(.+)$/);
+			if (!matches || !matches[1]) {
+				console.error("Could not extract public ID from URL");
+				return;
+			}
+
+			const publicId = matches[1].replace(/\.[^/.]+$/, ""); // Remove file extension
+
+			const data = new FormData();
+			data.append("public_id", publicId);
+			data.append("api_key", import.meta.env.VITE_CLOUDINARY_API_KEY);
+			data.append("cloud_name", import.meta.env.VITE_CLOUDINARY_CLOUD_NAME);
+
+			// Generate timestamp and signature
+			const timestamp = Math.round(new Date().getTime() / 1000);
+			data.append("timestamp", timestamp.toString());
+
+			await axios.post(
+				`https://api.cloudinary.com/v1_1/${
+					import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+				}/image/destroy`,
+				data
+			);
+
+			console.log("Image deleted successfully from Cloudinary");
+		} catch (error) {
+			console.error("Error deleting image from Cloudinary:", error);
+		}
+	};
 
 	const onSubmit: SubmitHandler<FormInputs> = async (data) => {
 		setResult(null);
+
 		try {
+			if (
+				mode === "edit" &&
+				initialValues?.imageLink &&
+				initialValues.imageLink !== data.imageLink
+			) {
+				await deleteImageFromCloudinary(initialValues.imageLink);
+			}
+
 			const payload = {
-				imageLink: data.imageLink.trim(),
+				imageLink: data.imageLink,
 				heading: data.heading.trim(),
 				text: data.text.trim(),
 				uploadedAt: new Date(),
@@ -106,6 +152,71 @@ const ArticleForm: React.FC<ArticleFormProps> = ({
 		.split(/\s+/)
 		.filter(Boolean).length;
 
+	const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+
+		// Validate file size (e.g., 5MB limit)
+		if (file.size > 5 * 1024 * 1024) {
+			setUploadStatus("File too large. Maximum size is 5MB");
+			return;
+		}
+
+		// Validate file type
+		if (!file.type.startsWith("image/")) {
+			setUploadStatus("Please upload an image file");
+			return;
+		}
+
+		setIsUploading(true);
+		setUploadStatus("Uploading...");
+
+		try {
+			if (
+				!import.meta.env.VITE_CLOUDINARY_CLOUD_NAME ||
+				!import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+			) {
+				throw new Error("Cloudinary configuration is missing");
+			}
+
+			const data = new FormData();
+			data.append("file", file);
+			data.append(
+				"upload_preset",
+				import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
+			);
+			data.append("cloud_name", import.meta.env.VITE_CLOUDINARY_CLOUD_NAME);
+
+			const response = await axios.post(
+				`https://api.cloudinary.com/v1_1/${
+					import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
+				}/image/upload`,
+				data
+			);
+
+			if (response.data && response.data.secure_url) {
+				console.log("Upload successful:", response.data.secure_url);
+				setValue("imageLink", response.data.secure_url);
+				setUploadStatus("Upload successful!");
+			} else {
+				console.error("Upload response missing secure_url:", response.data);
+				setUploadStatus("Upload failed: Invalid response");
+			}
+		} catch (error: any) {
+			console.error("Upload error details:", {
+				message: error.message,
+				response: error.response?.data,
+			});
+			setUploadStatus(
+				`Upload failed: ${
+					error.response?.data?.error?.message || error.message
+				}`
+			);
+		} finally {
+			setIsUploading(false);
+		}
+	};
+
 	return (
 		<div className="flex items-center justify-center min-h-screen bg-gray-100 w-screen">
 			<div className="max-w-lg w-full p-6 bg-white rounded-lg shadow-xl">
@@ -126,33 +237,53 @@ const ArticleForm: React.FC<ArticleFormProps> = ({
 				<form onSubmit={handleSubmit(onSubmit)} noValidate>
 					{/* Image Link Input */}
 					<div className="mb-4">
-						<label
-							htmlFor="imageLink"
-							className="block text-gray-700 font-medium mb-2"
-						>
-							Image URL or YouTube URL
+						<label className="block text-gray-700 font-medium mb-2">
+							Image Upload or URL
 						</label>
-						<input
-							type="url"
-							id="imageLink"
-							{...register("imageLink", {
-								required: "Image URL or YouTube URL is required.",
-								pattern: {
-									value:
-										/^https?:\/\/.*\.(jpeg|jpg|gif|png|webp|svg)$|^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/i,
-									message: "Please enter a valid image URL or YouTube URL.",
-								},
-							})}
-							className={`w-full px-3 py-2 border ${
-								errors.imageLink ? "border-red-500" : "border-gray-300"
-							} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
-							placeholder="https://example.com/image.jpg or https://youtube.com/watch?v=..."
-						/>
-						{errors.imageLink && (
-							<p className="mt-1 text-sm text-red-500">
-								{errors.imageLink.message}
-							</p>
-						)}
+						<div className="space-y-4">
+							{/* Image Preview */}
+							{watch("imageLink") && (
+								<div className="relative w-full h-48 rounded-lg overflow-hidden">
+									<img
+										src={watch("imageLink")}
+										alt="Preview"
+										className="w-full h-full object-cover"
+										onError={(e) => {
+											const target = e.target as HTMLImageElement;
+											target.src =
+												"https://via.placeholder.com/400x300?text=Image+Not+Found";
+										}}
+									/>
+								</div>
+							)}
+
+							<input
+								type="file"
+								accept="image/*"
+								onChange={handleImageUpload}
+								disabled={isUploading}
+								className="w-full"
+							/>
+							{uploadStatus && (
+								<p
+									className={`text-sm ${
+										uploadStatus.includes("successful")
+											? "text-green-600"
+											: "text-red-500"
+									}`}
+								>
+									{uploadStatus}
+								</p>
+							)}
+							<input
+								type="url"
+								{...register("imageLink")}
+								className={`w-full px-3 py-2 border ${
+									errors.imageLink ? "border-red-500" : "border-gray-300"
+								} rounded-md`}
+								placeholder="Image URL will appear here after upload, or enter URL manually"
+							/>
+						</div>
 					</div>
 
 					{/* Heading Input */}
