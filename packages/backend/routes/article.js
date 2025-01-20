@@ -1,8 +1,56 @@
 import express from "express";
 import Article from "../models/articleModel.js";
 import { io } from "../index.js";
+import axios from 'axios';
 
 const router = express.Router();
+
+let EXPO_PUSH_TOKEN = null;
+
+const sendPushNotification = async (title, body, data) => {
+	console.log('\n=== Push Notification Debug ===');
+	console.log('Token:', EXPO_PUSH_TOKEN);
+	console.log('Title:', title);
+	console.log('Body:', body);
+	console.log('Data:', data);
+	console.log('Sending push notification:', {
+		title,
+		body,
+		data
+	});
+
+	if (!EXPO_PUSH_TOKEN) {
+		console.error('⚠️ No Expo Push Token available');
+		return;
+	}
+
+	const message = {
+		to: EXPO_PUSH_TOKEN,
+		sound: 'default',
+		title,
+		body,
+		data,
+		priority: 'high',
+		channelId: 'default',
+		badge: 1,
+		contentAvailable: true,
+		subtitle: 'New Content Available',
+	};
+
+	try {
+		console.log('Sending notification to Expo service:', message);
+		const response = await axios.post('https://exp.host/--/api/v2/push/send', message, {
+			headers: {
+				'Accept': 'application/json',
+				'Accept-encoding': 'gzip, deflate',
+				'Content-Type': 'application/json',
+			},
+		});
+		console.log('Push notification sent successfully:', response.data);
+	} catch (error) {
+		console.error('Error sending push notification:', error.response?.data || error.message);
+	}
+};
 
 // Search route (must be first)
 router.get("/articles/search", async (req, res) => {
@@ -29,21 +77,36 @@ router.get("/articles/search", async (req, res) => {
 // POST /articles - Add a new article
 router.post("/articles", async (req, res) => {
 	try {
+		console.log('\n=== Creating New Article ===');
+		console.log('Environment Push Token:', EXPO_PUSH_TOKEN);
+		
 		const { imageLink, heading, text, uploadedAt } = req.body;
 		const newArticle = new Article({ imageLink, heading, text, uploadedAt });
 		const savedArticle = await newArticle.save();
 
-		// Emit the new article event with the saved article data
-		io.emit("newArticle", {
-			_id: savedArticle._id,
-			imageLink: savedArticle.imageLink,
-			heading: savedArticle.heading,
-			text: savedArticle.text,
-			uploadedAt: savedArticle.uploadedAt,
-		});
+		console.log('Article saved successfully:', savedArticle._id);
+
+		// Emit socket event for new article
+		io.emit('newArticle', savedArticle);
+
+		// Send push notification
+		if (EXPO_PUSH_TOKEN) {
+			console.log('Attempting to send push notification...');
+			await sendPushNotification(
+				'New Article Added',
+				heading,
+				{ 
+					articleId: savedArticle._id, 
+					imageUrl: savedArticle.imageLink,
+				}
+			);
+		} else {
+			console.warn('⚠️ No Expo Push Token available in environment variables');
+		}
 
 		res.status(201).json(savedArticle);
 	} catch (error) {
+		console.error('Error creating article:', error);
 		res.status(500).json({ message: error.message });
 	}
 });
@@ -71,10 +134,11 @@ router.get("/articles/:id", async (req, res) => {
 // PUT /articles/:id - Update an existing article
 router.put("/articles/:id", async (req, res) => {
 	try {
+		console.log('\n=== Updating Article ===');
+		console.log('Environment Push Token:', EXPO_PUSH_TOKEN);
+		
 		const { id } = req.params;
-		const { imageLink, heading, text, uploadedAt } = req.body;
-
-		console.log("PUT /articles/:id - Request received:", { id, heading });
+		const { imageLink, heading, text } = req.body;
 
 		const updatedArticle = await Article.findByIdAndUpdate(
 			id,
@@ -86,30 +150,36 @@ router.put("/articles/:id", async (req, res) => {
 			},
 			{ new: true, runValidators: true }
 		);
+
 		if (!updatedArticle) {
-			console.log("Article not found", id);
 			return res.status(404).json({ message: "Article not found" });
 		}
-		const eventData = {
+
+		// Emit socket event for real-time update
+		io.emit("articleUpdated", {
 			_id: updatedArticle._id,
 			imageLink: updatedArticle.imageLink,
 			heading: updatedArticle.heading,
 			text: updatedArticle.text,
 			uploadedAt: updatedArticle.uploadedAt,
-		};
-		// Emit socket event for article update
-		console.log("Emitting articleUpdated event:", eventData);
-		io.emit("articleUpdated", eventData);
+		});
 
-		// Debug: Log connected clients
-		const connectedClients = Array.from(io.sockets.sockets).map(
-			(socket) => socket[0]
-		);
-		console.log("Connected clients:", connectedClients);
+		// Send push notification for update
+		if (EXPO_PUSH_TOKEN) {
+			console.log('Attempting to send update notification...');
+			await sendPushNotification(
+				'New Article Added',
+				heading,
+				{ 
+					articleId: updatedArticle._id, 
+					imageUrl: updatedArticle.imageLink 
+				}
+			);
+		}
 
 		res.status(200).json(updatedArticle);
 	} catch (error) {
-		console.error("Update error:", error);
+		console.error('Error updating article:', error);
 		res.status(500).json({ message: error.message });
 	}
 });
@@ -122,6 +192,25 @@ router.delete("/articles/:id", async (req, res) => {
 		io.emit("articleDeleted", id);
 		res.status(204).send();
 	} catch (error) {
+		res.status(500).json({ message: error.message });
+	}
+});
+
+// Add this new route
+router.post('/register-push-token', (req, res) => {
+	try {
+		const { token } = req.body;
+		if (!token) {
+			console.log('Token is required');
+			return res.status(400).json({ message: 'Token is required' });
+		}
+		
+		EXPO_PUSH_TOKEN = token;
+		console.log('Expo Push Token registered:', EXPO_PUSH_TOKEN);
+		
+		res.status(200).json({ message: 'Token registered successfully' });
+	} catch (error) {
+		console.error('Error registering token:', error);
 		res.status(500).json({ message: error.message });
 	}
 });

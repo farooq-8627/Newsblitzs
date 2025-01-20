@@ -4,6 +4,7 @@ import { Article, BookmarksContext } from '@/context/BookmarksContext';
 import React from 'react';
 import Feed, { FeedHandle } from './Feed';
 import { Alert, Dimensions } from 'react-native';
+import { useTheme } from '@/context/ThemeContext';
 
 interface FeedItemsProps {
   articles: Article[];
@@ -25,6 +26,7 @@ const FeedItems = forwardRef<FeedItemsHandle, FeedItemsProps>(
     const scrollViewRef = useRef<Animated.ScrollView>(null);
     const feedRefs = useRef<{ [key: string]: FeedHandle | null }>({});
     const { toggleBookmark, isBookmarked } = useContext(BookmarksContext);
+    const { theme } = useTheme();
 
     const scrollToIndex = useCallback((index: number) => {
       if (scrollViewRef.current) {
@@ -114,6 +116,7 @@ const FeedItems = forwardRef<FeedItemsHandle, FeedItemsProps>(
         onScroll={scrollHandler}
         scrollEventThrottle={1}
         showsVerticalScrollIndicator={false}
+        style={{ backgroundColor: theme.bgColor }}
         refreshControl={refreshControl}>
         {articles.map((item, index) => renderItem(item, index))}
       </Animated.ScrollView>

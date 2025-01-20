@@ -9,6 +9,7 @@ import { captureRef } from 'react-native-view-shot';
 import * as Sharing from 'expo-sharing';
 import Toast from 'react-native-toast-message';
 import WebView from 'react-native-webview';
+import { useTheme } from '@/context/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 interface FeedProps {
@@ -50,6 +51,7 @@ const Feed = forwardRef<FeedHandle, FeedProps>(
     ref
   ) => {
     const viewRef = useRef<View>(null);
+    const { theme } = useTheme();   
 
     const animatedStyle = useArticleAnimatedStyle({
       index,
@@ -125,7 +127,7 @@ const Feed = forwardRef<FeedHandle, FeedProps>(
       <Animated.View
         ref={viewRef}
         key={article.id}
-        style={[{ width, height, backgroundColor: 'white' }, animatedStyle]}>
+        style={[{ width, height, backgroundColor: `${theme.bgColor}` }, animatedStyle]}>
         <View style={{ flex: 1 }}>
           <View style={{ flex: 5 }}>
             {isYouTubeUrl(article.imageUri) ? (
@@ -144,10 +146,16 @@ const Feed = forwardRef<FeedHandle, FeedProps>(
           </View>
 
           <View style={{ flex: 5, padding: 16 }}>
-            <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 8 }}>
+            <Text
+              style={{
+                fontSize: 22,
+                fontWeight: 'bold',
+                marginBottom: 8,
+                color: `${theme.headingColor}`,
+              }}>
               {article.heading}
             </Text>
-            <Text style={{ fontSize: 17 }}>{article.text}</Text>
+            <Text style={{ fontSize: 17, color: `${theme.textColor}` }}>{article.text}</Text>
           </View>
         </View>
 

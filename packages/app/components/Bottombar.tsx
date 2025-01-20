@@ -4,6 +4,7 @@ import { View, TouchableOpacity, Image } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import LottieView from 'lottie-react-native';
 import MenuModal from './MenuModal';
+import { useTheme } from '@/context/ThemeContext';
 
 interface BottomBarProps {
   isBookmarked: boolean;
@@ -19,14 +20,21 @@ const BottomBar: React.FC<BottomBarProps> = ({
   showBookmarksLink = true,
 }) => {
   const [isMenuVisible, setIsMenuVisible] = useState(false);
+  const { theme } = useTheme();
   return (
-    <View className="w-full flex-row items-center justify-between border-t border-gray-300 bg-white px-4 py-4">
+    <View
+      className="w-full flex-row items-center justify-between border-t bg-[#${bgColor}] px-4 py-4"
+      style={{ borderColor: theme.borderColor }}>
       <View className="flex-row">
         <TouchableOpacity onPress={onBookmarkPress} className="mx-2">
-          <Ionicons name={isBookmarked ? 'bookmark' : 'bookmark-outline'} size={30} color="#000" />
+          <Ionicons
+            name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
+            size={30}
+            color={`${theme.iconColor}`}
+          />
         </TouchableOpacity>
         <TouchableOpacity onPress={onSharePress} className="mx-2">
-          <Ionicons name="share-social-outline" size={30} color="#000" />
+          <Ionicons name="share-social-outline" size={30} color={`${theme.iconColor}`} />
         </TouchableOpacity>
       </View>
 
@@ -34,7 +42,7 @@ const BottomBar: React.FC<BottomBarProps> = ({
         <TouchableOpacity
           className="h-10 w-10 items-center justify-center rounded-full"
           onPress={() => setIsMenuVisible(true)}>
-          <Ionicons name="ellipsis-vertical" size={24} color="#666666" />
+          <Ionicons name="ellipsis-vertical" size={24} color={`${theme.iconColor}`} />
         </TouchableOpacity>
       </View>
 

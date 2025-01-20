@@ -1,3 +1,4 @@
+import { useTheme } from '@/context/ThemeContext';
 import {
   useAnimatedStyle,
   interpolate,
@@ -15,6 +16,7 @@ export const useArticleAnimatedStyle = ({
   index,
   height,
 }: AnimatedStyleParams) => {
+  const { theme } = useTheme();
   return useAnimatedStyle(() => {
     const scale = interpolate(
       scrollY.value,
@@ -47,7 +49,7 @@ export const useArticleAnimatedStyle = ({
     return {
       transform: [{ scale }],
       borderWidth: 2,
-      borderColor: 'rgba(0, 0, 0, 1)',
+      borderColor: theme.borderColor,
       padding: padding,
       borderRadius: borderRadius,
       opacity: borderOpacity,

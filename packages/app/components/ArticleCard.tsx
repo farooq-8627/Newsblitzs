@@ -2,6 +2,7 @@ import React from 'react';
 import { TouchableOpacity, Text } from 'react-native';
 import { useRouter } from 'expo-router';
 import MediaContent from './MediaContent';
+import { useTheme } from '@/context/ThemeContext';
 
 interface ArticleCardProps {
   id: string;
@@ -21,7 +22,7 @@ export default function ArticleCard({
   showDescription = false,
 }: ArticleCardProps) {
   const router = useRouter();
-
+  const { theme } = useTheme();
   const onPress = () => {
     if (handleCardPress) {
       handleCardPress(id);
@@ -32,12 +33,15 @@ export default function ArticleCard({
 
   return (
     <TouchableOpacity
-      className="my-2 rounded-lg border border-gray-300 bg-white shadow-lg"
+      className="my-2 rounded-lg border shadow-lg"
+      style={{ backgroundColor: theme.bgColor, borderColor: theme.cardBorderColor }}
       onPress={onPress}>
       <MediaContent url={imageLink} />
-      <Text className="px-4 py-2 text-center text-lg font-semibold">{heading}</Text>
+      <Text className="px-4 py-2 text-center text-lg font-semibold" style={{ color: theme.headingColor }}>
+        {heading}
+      </Text>
       {showDescription && text && (
-        <Text className="px-4 pb-4 text-gray-600" numberOfLines={2}>
+        <Text className="px-4 pb-4" numberOfLines={2} style={{ color: theme.textColor }}>
           {text}
         </Text>
       )}

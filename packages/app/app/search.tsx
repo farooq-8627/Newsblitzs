@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { debounce } from 'lodash';
 import { BACKEND_URL } from '../config/config';
 import ArticleCard from '../components/ArticleCard';
+import { useTheme } from '@/context/ThemeContext';
 interface SearchResult {
   id: string;
   imageLink: string;
@@ -14,6 +15,7 @@ interface SearchResult {
 }
 export default function Search() {
   const router = useRouter();
+  const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -78,11 +80,17 @@ export default function Search() {
   );
 
   return (
-    <View className="flex-1 bg-white">
-      <Stack.Screen options={{ title: 'Search Articles' }} />
+    <View className="flex-1" style={{ backgroundColor: theme.bgColor }}>
+      <Stack.Screen
+        options={{
+          title: 'Search Articles',
+          headerStyle: { backgroundColor: theme.bgColor },
+          headerTintColor: theme.headingColor,
+        }}
+      />
 
       <View className="mx-4 my-2 flex-row items-center rounded-lg bg-gray-100 px-3 py-2">
-        <Ionicons name="search" size={20} color="#666" />
+        <Ionicons name="search" size={20} color={theme.iconColor} />
         <TextInput
           className="ml-2 flex-1 text-base"
           placeholder="Search articles..."
@@ -102,7 +110,7 @@ export default function Search() {
           contentContainerStyle={{ padding: 16, paddingBottom: 70 }}
           renderItem={renderItem}
           ListEmptyComponent={
-            <Text className="text-center text-gray-500">
+            <Text className="text-center" style={{ color: theme.timeTextColor }}>
               {searchQuery ? 'No results found' : 'Start typing to search'}
             </Text>
           }

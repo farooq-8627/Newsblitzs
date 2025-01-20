@@ -9,6 +9,9 @@ import { registerForPushNotificationsAsync, sendLocalNotification } from '@/util
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import SocketManager from '@/utils/socket';
 import { ExpoPushToken } from 'expo-notifications';
+import { useTheme } from '@/context/ThemeContext';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { usePushNotifications } from '@/context/usePushNotifications';
 
 interface BackendArticle {
   _id: string;
@@ -36,6 +39,10 @@ export default function NewsFeed() {
   const responseListener = useRef<any>();
   const router = useRouter();
   const feedRef = useRef<FeedItemsHandle>(null);
+  const { theme } = useTheme();
+  const { expoPushToken, notification } = usePushNotifications();
+
+  const data = JSON.stringify(notification, undefined, 2);
 
   useEffect(() => {
     fetchArticles().then(() => {
@@ -96,7 +103,36 @@ export default function NewsFeed() {
       setRefreshing(false);
     }
   }, []);
+ 
+  const sendNotification = async (article: BackendArticle) => {
+    const truncatedText = article.text.length > 100 
+      ? `${article.text.substring(0, 100)}...` 
+      : article.text;
 
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'New Article Added',
+        subtitle: article.heading,
+        body: truncatedText,
+        data: {
+          articleId: article._id,
+          imageUrl: article.imageLink,
+        },
+        attachments: [
+          {
+            identifier: 'article-image',
+            url: article.imageLink,
+            type: 'image',
+          },
+        ],
+        sound: 'default',
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+        badge: 1,
+      },
+      trigger: null,
+    });
+  };
+  
   const handleNewArticle = useCallback((newArticle: BackendArticle) => {
     console.log('Received new article:', newArticle);
     const transformedArticle: Article = {
@@ -107,21 +143,15 @@ export default function NewsFeed() {
       updatedAt: newArticle.uploadedAt,
     };
     setArticles((prevArticles) => [transformedArticle, ...prevArticles]);
-
-    // Truncate heading and text for notification
-    const truncatedHeading =
-      newArticle.heading.length > 40
-        ? `${newArticle.heading.substring(0, 40)}...`
-        : newArticle.heading;
-
-    const truncatedText =
-      newArticle.text.length > 80 ? `${newArticle.text.substring(0, 80)}...` : newArticle.text;
-    sendLocalNotification(truncatedHeading, truncatedText, { articleId: newArticle._id });
+    sendNotification(newArticle);
   }, []);
 
   const handleArticleUpdate = useCallback((updatedArticle: BackendArticle) => {
+    console.log('Handling article update:', updatedArticle);
     setArticles((prevArticles) => {
-      const filteredArticles = prevArticles.filter((article) => article.id !== updatedArticle._id);
+      const filteredArticles = prevArticles.filter(
+        (article) => article.id !== updatedArticle._id
+      );
       const transformedArticle: Article = {
         id: updatedArticle._id,
         imageUri: updatedArticle.imageLink,
@@ -130,18 +160,26 @@ export default function NewsFeed() {
         updatedAt: updatedArticle.uploadedAt,
       };
 
-      // Truncate heading and text for notification
-      const truncatedHeading =
-        updatedArticle.heading.length > 40
-          ? `${updatedArticle.heading.substring(0, 40)}...`
-          : updatedArticle.heading;
+      // Send local notification for update
+      const truncatedText = updatedArticle.text.length > 100 
+        ? `${updatedArticle.text.substring(0, 100)}...` 
+        : updatedArticle.text;
 
-      const truncatedText =
-        updatedArticle.text.length > 80
-          ? `${updatedArticle.text.substring(0, 80)}...`
-          : updatedArticle.text;
-
-      sendLocalNotification(truncatedHeading, truncatedText, { articleId: updatedArticle._id });
+      Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Article Updated',
+          subtitle: updatedArticle.heading,
+          body: truncatedText,
+          data: {
+            articleId: updatedArticle._id,
+            imageUrl: updatedArticle.imageLink,
+            type: 'update'
+          },
+          sound: 'default',
+          priority: Notifications.AndroidNotificationPriority.HIGH,
+        },
+        trigger: null,
+      });
 
       return [transformedArticle, ...filteredArticles];
     });
@@ -151,6 +189,7 @@ export default function NewsFeed() {
     setArticles((prevArticles) => prevArticles.filter((article) => article.id !== deletedId));
   }, []);
 
+
   useEffect(() => {
     const socket = SocketManager.getSocket();
 
@@ -159,63 +198,68 @@ export default function NewsFeed() {
     socket.on('articleUpdated', handleArticleUpdate);
     socket.on('articleDeleted', handleArticleDelete);
 
-    // Push notification setup
-    registerForPushNotificationsAsync().then((token: ExpoPushToken | undefined) => {
-      if (token) {
-        console.log('Expo push token:', token);
-      }
-    });
+    // Initial fetch
+    fetchArticles();
 
-    // Notification listeners
-    notificationListener.current = Notifications.addNotificationReceivedListener((notification) => {
-      console.log('Notification received:', notification);
-    });
+    return () => {
+      socket.off('newArticle', handleNewArticle);
+      socket.off('articleUpdated', handleArticleUpdate);
+      socket.off('articleDeleted', handleArticleDelete);
+    };
+  }, [handleNewArticle, handleArticleUpdate, handleArticleDelete, articles]); // Socket-related dependencies
 
-    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log('Notification clicked:', response);
       const articleId = response.notification.request.content.data?.articleId;
-
       if (articleId) {
-        const articleIndex = articles.findIndex((article) => article.id === articleId);
+        console.log('Navigating to article:', articleId);
+        const articleIndex = articles.findIndex(article => article.id === articleId);
         if (articleIndex !== -1) {
+          console.log('Article found in current list, scrolling to index:', articleIndex);
           feedRef.current?.scrollToIndex(articleIndex);
         } else {
+          console.log('Article not found in current list, navigating to article page');
           router.push(`/article/${articleId}`);
         }
       }
     });
 
-    // Initial fetch
-    fetchArticles();
-
     return () => {
-      // Cleanup socket listeners
-      socket.off('newArticle', handleNewArticle);
-      socket.off('articleUpdated', handleArticleUpdate);
-      socket.off('articleDeleted', handleArticleDelete);
-
-      // Cleanup notification listeners
-      if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
-      }
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
-      }
+      subscription.remove();
     };
   }, [articles, router]);
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center">
-        <ActivityIndicator size="large" color="#0000ff" />
-        <Text className="mt-2">Loading articles...</Text>
+      <View
+        className="flex-1 items-center justify-center"
+        style={{ backgroundColor: theme.bgColor }}>
+        <ActivityIndicator size="large" color={theme.iconColor} />
+        <Text className="mt-2" style={{ color: theme.textColor }}>
+          Loading articles...
+        </Text>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View className="flex-1 items-center justify-center p-4">
-        <Text className="text-lg text-red-500">{error}</Text>
+      <View
+        className="flex-1 items-center justify-center p-4"
+        style={{ backgroundColor: theme.bgColor }}>
+        <Text style={{ color: theme.textColor }} className="mb-4 text-center text-lg">
+          {error}
+        </Text>
+        <TouchableOpacity
+          onPress={onRefresh}
+          className="flex-row items-center rounded-full bg-blue-500 px-6 py-3"
+          style={{ backgroundColor: theme.iconColor }}>
+          <Ionicons name="refresh-outline" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+          <Text style={{ color: '#FFFFFF', fontWeight: '500' }}>
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </Text>
+        </TouchableOpacity>
       </View>
     );
   }

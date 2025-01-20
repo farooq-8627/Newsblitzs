@@ -1,71 +1,81 @@
 import '../global.css';
-
-import { Stack } from 'expo-router';
 import { BookmarksProvider } from '@/context/BookmarksContext';
-import Toast, { BaseToast, ErrorToast, ToastProps } from 'react-native-toast-message';
-import { StatusBar } from 'react-native';
-import { MotiView } from 'moti';
+import { ThemeProvider } from '@/context/ThemeContext';
+import { SplashScreen } from 'expo-router';
+import RootLayoutContent from '@/components/RootLayoutContent';
+import { useEffect } from 'react';
+import * as Notifications from 'expo-notifications';
+import * as TaskManager from 'expo-task-manager';
+import {
+  useFonts,
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+} from '@expo-google-fonts/poppins';
 
-const toastConfig = {
-  success: (props: ToastProps) => (
-    <MotiView 
-      from={{ translateY: -100, opacity: 0 }}
-      animate={{ translateY: 0, opacity: 1 }}
-      exit={{ translateY: -100, opacity: 0 }}
-      transition={{ type: 'timing', duration: 200 }}>
-      <BaseToast
-        {...props}
-        style={{
-          borderLeftColor: '#00C851',
-          backgroundColor: 'white',
-          height: 60,
-        }}
-        contentContainerStyle={{ paddingHorizontal: 15 }}
-        text1Style={{
-          fontSize: 15,
-          fontWeight: '500',
-        }}
-        text2Style={{
-          fontSize: 13,
-        }}
-      />
-    </MotiView>
-  ),
-  error: (props: ToastProps) => (
-    <MotiView 
-      from={{ translateY: -100, opacity: 0 }}
-      animate={{ translateY: 0, opacity: 1 }}
-      exit={{ translateY: -100, opacity: 0 }}
-      transition={{ type: 'timing', duration: 200 }}>
-      <ErrorToast
-        {...props}
-        style={{
-          borderLeftColor: '#ff4444',
-          backgroundColor: 'white',
-          height: 60,
-        }}
-        text1Style={{
-          fontSize: 15,
-          fontWeight: '500',
-        }}
-        text2Style={{
-          fontSize: 13,
-        }}
-      />
-    </MotiView>
-  ),
-};
+const BACKGROUND_NOTIFICATION_TASK = 'BACKGROUND-NOTIFICATION-TASK';
 
-export default function Layout() {
+// Define the background task
+TaskManager.defineTask(BACKGROUND_NOTIFICATION_TASK, async ({ data, error }) => {
+  if (error) {
+    console.error('Background task error:', error);
+    return;
+  }
+  
+  if (data) {
+    console.log('Received background notification:', data);
+  }
+});
+
+// Configure notifications
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    priority: Notifications.AndroidNotificationPriority.HIGH,
+  }),
+});
+
+SplashScreen.preventAutoHideAsync();
+
+export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_500Medium,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  useEffect(() => {
+    // Register background task
+    async function registerBackgroundTask() {
+      try {
+        await Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
+      } catch (err) {
+        console.error('Task registration failed:', err);
+      }
+    }
+
+    registerBackgroundTask();
+  }, []);
+
+  if (!fontsLoaded) {
+    return null;
+  }
+
   return (
-    <BookmarksProvider>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" translucent={false} />
-      <Stack screenOptions={{ headerShown: true, headerBackButtonDisplayMode: 'minimal' }}>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="bookmarks" options={{ title: 'Bookmarks' }} />
-        <Stack.Screen name="article/[id]" options={{ headerShown: false }} />
-      </Stack>
-      <Toast config={toastConfig} position="top" visibilityTime={2000} topOffset={40} />
-    </BookmarksProvider>
+    <ThemeProvider>
+      <BookmarksProvider>
+        <RootLayoutContent />
+      </BookmarksProvider>
+    </ThemeProvider>
   );
 }

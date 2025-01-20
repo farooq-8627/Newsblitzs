@@ -1,5 +1,5 @@
 {
-  "name": "NewsBlitzs",
+  "name": "newsblitzs",
   "version": "1.0.0",
   "main": "expo-router/entry",
   "scripts": {
@@ -12,16 +12,22 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo-google-fonts/poppins": "^0.2.3",
     "@expo/vector-icons": "^14.0.0",
     "@react-native-async-storage/async-storage": "^2.1.0",
     "date-fns": "^4.1.0",
     "expo": "^52.0.17",
     "expo-constants": "~17.0.3",
+    "expo-dev-client": "~5.0.8",
     "expo-device": "~7.0.1",
+    "expo-font": "^13.0.3",
     "expo-linking": "~7.0.3",
     "expo-notifications": "~0.29.11",
-    "expo-router": "~4.0.6",
+    "expo-router": "^4.0.17",
     "expo-sharing": "~13.0.0",
+    "expo-splash-screen": "^0.29.20",
+    "expo-system-ui": "~4.0.6",
+    "expo-task-manager": "^12.0.4",
     "lodash": "^4.17.21",
     "lottie-react-native": "^7.1.0",
     "moti": "^0.29.0",
