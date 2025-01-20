@@ -1,54 +1,22 @@
 import express from "express";
 import Article from "../models/articleModel.js";
 import { io } from "../index.js";
-import axios from 'axios';
+import { sendNotification } from '../services/notificationService.js';
 
 const router = express.Router();
-
 let EXPO_PUSH_TOKEN = null;
 
 const sendPushNotification = async (title, body, data) => {
-	console.log('\n=== Push Notification Debug ===');
-	console.log('Token:', EXPO_PUSH_TOKEN);
-	console.log('Title:', title);
-	console.log('Body:', body);
-	console.log('Data:', data);
-	console.log('Sending push notification:', {
-		title,
-		body,
-		data
-	});
-
 	if (!EXPO_PUSH_TOKEN) {
 		console.error('⚠️ No Expo Push Token available');
 		return;
 	}
 
-	const message = {
-		to: EXPO_PUSH_TOKEN,
-		sound: 'default',
-		title,
-		body,
-		data,
-		priority: 'high',
-		channelId: 'default',
-		badge: 1,
-		contentAvailable: true,
-		subtitle: 'New Content Available',
-	};
-
 	try {
-		console.log('Sending notification to Expo service:', message);
-		const response = await axios.post('https://exp.host/--/api/v2/push/send', message, {
-			headers: {
-				'Accept': 'application/json',
-				'Accept-encoding': 'gzip, deflate',
-				'Content-Type': 'application/json',
-			},
-		});
-		console.log('Push notification sent successfully:', response.data);
+		await sendNotification(EXPO_PUSH_TOKEN, title, body, data);
+		console.log('Push notification sent successfully');
 	} catch (error) {
-		console.error('Error sending push notification:', error.response?.data || error.message);
+		console.error('Error sending push notification:', error);
 	}
 };
 

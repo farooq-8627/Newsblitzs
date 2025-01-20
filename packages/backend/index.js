@@ -5,6 +5,7 @@ import { Server } from "socket.io";
 import cors from "cors";
 import articleRoutes from "./routes/article.js";
 import dotenv from "dotenv";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 // Initialize express app
 const app = express();
@@ -73,6 +74,7 @@ if (process.env.NODE_ENV === "production") {
 
 // Routes
 app.use("/api", articleRoutes);
+app.use('/', notificationRoutes);
 
 // Socket.IO connection handling
 io.on("connection", (socket) => {
