@@ -22,11 +22,8 @@ export async function sendNotification(token, title, body, data) {
         },
       }
     );
-
-    console.log('Successfully sent notification:', response.data);
     return response.data;
   } catch (error) {
-    console.error('Error sending notification:', error);
     throw error;
   }
 }
